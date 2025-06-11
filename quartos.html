@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema de Cadastro de Quartos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="bg-light p-4">
+  <div class="container">
+    <h1>Cadastro de Quartos</h1>
+
+    <form id="formQuarto" novalidate class="mb-4">
+      <div class="mb-3">
+        <label for="numero" class="form-label">Número do Quarto</label>
+        <input type="number" id="numero" class="form-control" required min="1" />
+      </div>
+
+      <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo</label>
+        <select id="tipo" class="form-select" required>
+          <option value="" disabled selected>Selecione o tipo</option>
+          <option value="Solteiro">Solteiro</option>
+          <option value="Casal">Casal</option>
+          <option value="Triplo">Triplo</option>
+          <option value="Suíte">Suíte</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="valor" class="form-label">Valor da Diária (R$)</label>
+        <input type="number" id="valor" class="form-control" required min="0" step="0.01" />
+      </div>
+
+      <button type="submit" id="btnSubmitQuarto" class="btn btn-primary" disabled>Adicionar Quarto</button>
+      <button type="button" id="btnLimpar" class="btn btn-danger ms-2">Limpar Cadastro</button>
+      <button type="button" class="btn btn-secondary ms-2" onclick="window.location.href='index.html'">Voltar</button>
+    </form>
+
+    <h2>Lista de Quartos</h2>
+    <table class="table table-striped bg-white rounded shadow-sm">
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Tipo</th>
+          <th>Valor (R$)</th>
+        </tr>
+      </thead>
+      <tbody id="listaQuartos">
+        <tr><td colspan="3" class="text-center">Nenhum quarto cadastrado</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+  const formQuarto = document.getElementById('formQuarto');
+  const inputNumero = document.getElementById('numero');
+  const inputTipo = document.getElementById('tipo');
+  const inputValor = document.getElementById('valor');
+  const btnSubmitQuarto = document.getElementById('btnSubmitQuarto');
+  const btnLimpar = document.getElementById('btnLimpar');
+  const listaQuartos = document.getElementById('listaQuartos');
+
+  let quartos = JSON.parse(localStorage.getItem('quartos')) || [];
+
+  function validarFormularioQuarto() {
+    const numeroValido = inputNumero.value.trim() !== '' && Number(inputNumero.value) > 0;
+    const tipoValido = inputTipo.value.trim() !== '';
+    const valorValido = inputValor.value.trim() !== '' && Number(inputValor.value) > 0;
+    btnSubmitQuarto.disabled = !(numeroValido && tipoValido && valorValido);
+  }
+
+  function atualizarListaQuartos() {
+    listaQuartos.innerHTML = '';
+
+    if (quartos.length === 0) {
+      listaQuartos.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhum quarto cadastrado</td></tr>`;
+      return;
+    }
+
+    quartos.forEach((q) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${q.numero}</td>
+        <td>${q.tipo}</td>
+        <td>R$ ${q.valor.toFixed(2)}</td>
+      `;
+      listaQuartos.appendChild(tr);
+    });
+  }
+
+  inputNumero.addEventListener('input', validarFormularioQuarto);
+  inputTipo.addEventListener('change', validarFormularioQuarto);
+  inputValor.addEventListener('input', validarFormularioQuarto);
+
+  formQuarto.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const numero = Number(inputNumero.value.trim());
+    const tipo = inputTipo.value.trim();
+    const valor = parseFloat(inputValor.value.trim());
+
+    if (isNaN(numero) || numero <= 0) {
+      alert('Informe um número válido para o quarto.');
+      return;
+    }
+
+    if (tipo === '') {
+      alert('Informe o tipo do quarto.');
+      return;
+    }
+
+    if (isNaN(valor) || valor <= 0) {
+      alert('Informe um valor válido para a diária.');
+      return;
+    }
+
+    if (quartos.find(q => q.numero === numero)) {
+      alert('Já existe um quarto cadastrado com esse número.');
+      return;
+    }
+
+    quartos.push({ numero, tipo, valor });
+    localStorage.setItem('quartos', JSON.stringify(quartos));
+
+    atualizarListaQuartos();
+
+    formQuarto.reset();
+    btnSubmitQuarto.disabled = true;
+  });
+
+  btnLimpar.addEventListener('click', () => {
+    if (confirm('Deseja realmente limpar todos os quartos cadastrados?')) {
+      quartos = [];
+      localStorage.removeItem('quartos');
+      atualizarListaQuartos();
+      formQuarto.reset();
+      btnSubmitQuarto.disabled = true;
+    }
+  });
+
+  atualizarListaQuartos();
+</script>
+</body>
+</html>
