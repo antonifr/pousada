@@ -238,104 +238,36 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    const loginScreen = document.getElementById('login-screen');
-    const mainContent = document.getElementById('main-content');
-    const loginForm = document.getElementById('loginForm');
+  const loginScreen = document.getElementById('login-screen');
+  const mainContent = document.getElementById('main-content');
+  const loginForm = document.getElementById('loginForm');
 
-    // Usuário e senha fixos (mude aqui se quiser)
-    const USER = 'admin';
-    const PASS = '1234';
+  // Usuário e senha fixos (mude aqui se quiser)
+  const USER = 'admin';
+  const PASS = '1234';
 
-    // Verifica se já está logado na sessão
-    if(sessionStorage.getItem('loggedIn') === 'true'){
-      loginScreen.style.display = 'none';
-      mainContent.style.display = 'block';
+  // Verifica se já está logado na sessão
+  if(sessionStorage.getItem('loggedIn') === 'true'){
+    // Se estiver logado, redireciona para index.html
+    window.location.href = 'index.html';
+  }
+
+  loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const user = loginForm.username.value.trim();
+    const pass = loginForm.password.value.trim();
+
+    if(user === USER && pass === PASS){
+      sessionStorage.setItem('loggedIn', 'true');
+      // Redireciona para index.html após login
+      window.location.href = 'index.html';
+    } else {
+      alert('Usuário ou senha incorretos!');
     }
+  });
 
-    loginForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const user = loginForm.username.value.trim();
-      const pass = loginForm.password.value.trim();
+  // O resto do código do sistema (aluguel etc) pode ficar no index.html
+</script>
 
-      if(user === USER && pass === PASS){
-        sessionStorage.setItem('loggedIn', 'true');
-        loginScreen.style.display = 'none';
-        mainContent.style.display = 'block';
-      } else {
-        alert('Usuário ou senha incorretos!');
-      }
-    });
-
-    // Código do seu sistema aluguel
-
-    const formAluguel = document.getElementById('form-aluguel');
-    const tabelaAlugueis = document.getElementById('tabela-alugueis');
-    const selectCliente = document.getElementById('nomeCliente');
-
-    let alugueis = JSON.parse(localStorage.getItem('alugueis') || '[]');
-
-    function carregarClientes() {
-      const clientes = JSON.parse(localStorage.getItem('hospedes') || '[]');
-      selectCliente.innerHTML = '<option value="" disabled selected>Escolha...</option>';
-
-      if (clientes.length === 0) {
-        alert('Nenhum cliente cadastrado. Cadastre hóspedes primeiro.');
-        selectCliente.disabled = true;
-        return;
-      }
-
-      clientes.forEach(cliente => {
-        const option = document.createElement('option');
-        option.value = cliente.nome;
-        option.textContent = cliente.nome;
-        selectCliente.appendChild(option);
-      });
-
-      selectCliente.disabled = false;
-    }
-
-    function renderAlugueis() {
-      tabelaAlugueis.innerHTML = '';
-      alugueis.forEach((a, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${a.cliente}</td>
-          <td>${a.tipo}</td>
-          <td>${a.dataInicio}</td>
-          <td>${a.dataFim}</td>
-          <td><button class="btn btn-sm btn-danger" onclick="removerAluguel(${i})"><i class="bi bi-trash"></i></button></td>
-        `;
-        tabelaAlugueis.appendChild(tr);
-      });
-    }
-
-    function removerAluguel(index) {
-      alugueis.splice(index, 1);
-      localStorage.setItem('alugueis', JSON.stringify(alugueis));
-      renderAlugueis();
-    }
-
-    formAluguel.addEventListener('submit', e => {
-      e.preventDefault();
-      const cliente = selectCliente.value;
-      const tipo = document.getElementById('tipoBarco').value;
-      const dataInicio = document.getElementById('dataInicio').value;
-      const dataFim = document.getElementById('dataFim').value;
-
-      if (new Date(dataInicio) > new Date(dataFim)) {
-        alert('Data início não pode ser maior que data fim');
-        return;
-      }
-
-      alugueis.push({ cliente, tipo, dataInicio, dataFim });
-      localStorage.setItem('alugueis', JSON.stringify(alugueis));
-      renderAlugueis();
-      formAluguel.reset();
-    });
-
-    // Inicialização
-    carregarClientes();
-    renderAlugueis();
-  </script>
 </body>
 </html>
