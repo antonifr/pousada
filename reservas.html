@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reservas - Sistema de Hospedagem</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 2rem;
+    }
+    h2 {
+      margin-bottom: 1rem;
+    }
+    .card {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    table th {
+      background-color: #007bff;
+      color: white;
+    }
+    button {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Nova Reserva</h2>
+    <form id="formReserva">
+      <div class="mb-3">
+        <label for="selectCliente" class="form-label">Cliente</label>
+        <select id="selectCliente" class="form-select" required>
+          <option value="">Selecione um cliente</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="selectQuarto" class="form-label">Quarto</label>
+        <select id="selectQuarto" class="form-select" required>
+          <option value="">Selecione um quarto</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="selectEmbarcacao" class="form-label">Embarcação (Opcional)</label>
+        <select id="selectEmbarcacao" class="form-select">
+          <option value="">Nenhuma</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="dataEntrada" class="form-label">Data Entrada</label>
+        <input type="date" id="dataEntrada" class="form-control" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="dataSaida" class="form-label">Data Saída</label>
+        <input type="date" id="dataSaida" class="form-control" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="inputValor" class="form-label">Valor Total (R$)</label>
+        <input type="text" id="inputValor" class="form-control" readonly />
+      </div>
+
+      <button type="submit" id="btnSubmitReserva" class="btn btn-primary" disabled>Salvar Reserva</button>
+      <button type="button" id="btnLimparReservas" class="btn btn-danger ms-2">Limpar Reservas</button>
+      <button type="button" id="btnVoltarIndex" class="btn btn-secondary ms-2">Voltar</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Reservas Cadastradas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Quarto</th>
+          <th>Número do Quarto</th>
+          <th>Embarcação</th>
+          <th>Entrada</th>
+          <th>Saída</th>
+          <th>Valor (R$)</th>
+        </tr>
+      </thead>
+      <tbody id="listaReservas"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Totais por Cliente</h2>
+    <ul id="somaPorCliente" class="list-group"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Totais por Embarcação</h2>
+    <ul id="somaPorEmbarcacao" class="list-group"></ul>
+  </div>
+
+  <script>
+    const selectCliente = document.getElementById('selectCliente');
+    const selectQuarto = document.getElementById('selectQuarto');
+    const selectEmbarcacao = document.getElementById('selectEmbarcacao');
+    const dataEntrada = document.getElementById('dataEntrada');
+    const dataSaida = document.getElementById('dataSaida');
+    const inputValor = document.getElementById('inputValor');
+    const btnSubmitReserva = document.getElementById('btnSubmitReserva');
+    const btnLimparReservas = document.getElementById('btnLimparReservas');
+    const btnVoltarIndex = document.getElementById('btnVoltarIndex');
+    const listaReservas = document.getElementById('listaReservas');
+    const somaPorCliente = document.getElementById('somaPorCliente');
+    const somaPorEmbarcacao = document.getElementById('somaPorEmbarcacao');
+    const formReserva = document.getElementById('formReserva');
+
+    let reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+    let hospedes = JSON.parse(localStorage.getItem('hospedes')) || [];
+    let quartos = JSON.parse(localStorage.getItem('quartos')) || [];
+    let embarcacoes = JSON.parse(localStorage.getItem('embarcacoes')) || [];
+
+    function preencherSelects() {
+      // Clientes
+      selectCliente.innerHTML = '<option value="">Selecione um cliente</option>';
+      hospedes.forEach(h => {
+        selectCliente.innerHTML += `<option value="${h.nome}">${h.nome}</option>`;
+      });
+
+      // Quartos
+      selectQuarto.innerHTML = '<option value="">Selecione um quarto</option>';
+      quartos.forEach(q => {
+        // Aqui armazenamos o nome no value e usamos dataset para número e valor
+        selectQuarto.innerHTML += `<option value="${q.nome}" data-numero="${q.numero}" data-valor="${q.valor}">${q.nome} (Nº ${q.numero}) - R$ ${parseFloat(q.valor).toFixed(2)}</option>`;
+      });
+
+      // Embarcações
+      selectEmbarcacao.innerHTML = '<option value="">Nenhuma</option>';
+      embarcacoes.forEach(e => {
+        selectEmbarcacao.innerHTML += `<option value="${e.nome}" data-valor="${e.valor}">${e.nome} - R$ ${parseFloat(e.valor).toFixed(2)}</option>`;
+      });
+    }
+
+    function calcularValor() {
+      const valorQuarto = parseFloat(selectQuarto.selectedOptions[0]?.dataset.valor || 0);
+      const valorEmbarcacao = parseFloat(selectEmbarcacao.selectedOptions[0]?.dataset.valor || 0);
+      const entrada = new Date(dataEntrada.value);
+      const saida = new Date(dataSaida.value);
+
+      if (isNaN(entrada) || isNaN(saida) || saida <= entrada) {
+        inputValor.value = '';
+        return;
+      }
+
+      const diffTime = saida.getTime() - entrada.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      const total = diffDays * (valorQuarto + valorEmbarcacao);
+      inputValor.value = total.toFixed(2);
+    }
+
+    function validarFormulario() {
+      const clienteValido = selectCliente.value !== '';
+      const quartoValido = selectQuarto.value !== '';
+      const entradaValida = dataEntrada.value !== '';
+      const saidaValida = dataSaida.value !== '' && (new Date(dataSaida.value) > new Date(dataEntrada.value));
+      const valorValido = inputValor.value !== '' && parseFloat(inputValor.value) > 0;
+
+      btnSubmitReserva.disabled = !(clienteValido && quartoValido && entradaValida && saidaValida && valorValido);
+    }
+
+    function mostrarReservas() {
+      listaReservas.innerHTML = '';
+      if (reservas.length === 0) {
+        listaReservas.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhuma reserva cadastrada.</td></tr>';
+      } else {
+        reservas.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${r.cliente}</td>
+            <td>${r.quarto}</td>
+            <td>${r.numeroQuarto || '-'}</td>
+            <td>${r.embarcacao || '-'}</td>
+            <td>${r.dataEntrada}</td>
+            <td>${r.dataSaida}</td>
+            <td>R$ ${parseFloat(r.valor).toFixed(2)}</td>
+          `;
+          listaReservas.appendChild(tr);
+        });
+      }
+      calcularSomaPorCliente();
+      calcularSomaPorEmbarcacao();
+    }
+
+    function calcularSomaPorCliente() {
+      const soma = {};
+      reservas.forEach(r => {
+        const valor = parseFloat(r.valor) || 0;
+        soma[r.cliente] = (soma[r.cliente] || 0) + valor;
+      });
+
+      somaPorCliente.innerHTML = '';
+      if (Object.keys(soma).length === 0) {
+        somaPorCliente.innerHTML = '<li class="list-group-item text-muted">Nenhuma reserva cadastrada.</li>';
+        return;
+      }
+
+      for (const cliente in soma) {
+        const li = document.createElement('li');
+        li.classList.add('list-group-item');
+        li.textContent = `${cliente}: R$ ${soma[cliente].toFixed(2)}`;
+        somaPorCliente.appendChild(li);
+      }
+    }
+
+    function calcularSomaPorEmbarcacao() {
+      const soma = {};
+      reservas.forEach(r => {
+        if (r.embarcacao && r.embarcacao.trim() !== '') {
+          const valor = parseFloat(r.valor) || 0;
+          soma[r.embarcacao] = (soma[r.embarcacao] || 0) + valor;
+        }
+      });
+
+      somaPorEmbarcacao.innerHTML = '';
+      if (Object.keys(soma).length === 0) {
+        somaPorEmbarcacao.innerHTML = '<li class="list-group-item text-muted">Nenhuma reserva com embarcação.</li>';
+        return;
+      }
+
+      for (const embarcacao in soma) {
+        const li = document.createElement('li');
+        li.classList.add('list-group-item');
+        li.textContent = `${embarcacao}: R$ ${soma[embarcacao].toFixed(2)}`;
+        somaPorEmbarcacao.appendChild(li);
+      }
+    }
+
+    function adicionarReserva(e) {
+      e.preventDefault();
+
+      // pegar número do quarto do option selecionado
+      const quartoSelecionado = selectQuarto.selectedOptions[0];
+      const numeroQuarto = quartoSelecionado?.dataset.numero || '';
+
+      const novaReserva = {
+        cliente: selectCliente.value,
+        quarto: selectQuarto.value,
+        numeroQuarto: numeroQuarto,
+        embarcacao: selectEmbarcacao.value || '',
+        dataEntrada: dataEntrada.value,
+        dataSaida: dataSaida.value,
+        valor: inputValor.value,
+      };
+
+      reservas.push(novaReserva);
+      localStorage.setItem('reservas', JSON.stringify(reservas));
+      mostrarReservas();
+      formReserva.reset();
+      inputValor.value = '';
+      btnSubmitReserva.disabled = true;
+    }
+
+    function limparReservas() {
+      if (confirm('Deseja realmente limpar todas as reservas?')) {
+        reservas = [];
+        localStorage.setItem('reservas', JSON.stringify(reservas));
+        mostrarReservas();
+      }
+    }
+
+    btnVoltarIndex.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    selectCliente.addEventListener('change', validarFormulario);
+    selectQuarto.addEventListener('change', () => { calcularValor(); validarFormulario(); });
+    selectEmbarcacao.addEventListener('change', () => { calcularValor(); validarFormulario(); });
+    dataEntrada.addEventListener('change', () => { calcularValor(); validarFormulario(); });
+    dataSaida.addEventListener('change', () => { calcularValor(); validarFormulario(); });
+
+    formReserva.addEventListener('submit', adicionarReserva);
+    btnLimparReservas.addEventListener('click', limparReservas);
+
+    // Inicializa selects e lista
+    preencherSelects();
+    mostrarReservas();
+    validarFormulario();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

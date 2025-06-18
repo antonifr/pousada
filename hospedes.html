@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cadastro de Hóspedes com Valores</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 2rem; }
+    .card { background: #fff; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+    table { margin-top: 1rem; width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background-color: #0ba29d; color: white; }
+    tbody tr:hover { background-color: #e0f7f5; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <button type="button" class="btn btn-secondary mb-3" onclick="location.href='index.html'">← Voltar</button>
+    <h2>Cadastro de Hóspede</h2>
+    <form id="formHospede" novalidate>
+      <div class="mb-3">
+        <label for="inputNome" class="form-label">Nome</label>
+        <input type="text" id="inputNome" class="form-control" required />
+      </div>
+      <div class="mb-3">
+        <label for="inputEmail" class="form-label">Email</label>
+        <input type="email" id="inputEmail" class="form-control" required />
+      </div>
+      <div class="mb-3">
+        <label for="inputCPF" class="form-label">CPF</label>
+        <input type="text" id="inputCPF" class="form-control" maxlength="14" placeholder="000.000.000-00" required />
+      </div>
+      <div class="mb-3">
+        <label for="inputTelefone" class="form-label">Telefone</label>
+        <input type="tel" id="inputTelefone" class="form-control" maxlength="15" placeholder="(00) 00000-0000" required />
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar Hóspede</button>
+      <button type="button" id="btnLimparHospedes" class="btn btn-outline-danger ms-2">Limpar Lista</button>
+    </form>
+
+    <table id="tabelaHospedes" class="table table-striped mt-4">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>CPF</th>
+          <th>Telefone</th>
+          <th>Valor Total Reservas (R$)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const formHospede = document.getElementById('formHospede');
+    const tabelaHospedes = document.querySelector('#tabelaHospedes tbody');
+    const btnLimparHospedes = document.getElementById('btnLimparHospedes');
+
+    const inputCPF = document.getElementById('inputCPF');
+    const inputTelefone = document.getElementById('inputTelefone');
+
+    let hospedes = JSON.parse(localStorage.getItem('hospedes')) || [];
+    let reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+
+    function calcularTotalPorHospede(cpf) {
+      let total = 0;
+      let indexHospede = hospedes.findIndex(h => h.cpf === cpf);
+      if (indexHospede !== -1) {
+        reservas.forEach(r => {
+          if (r.idHospede === indexHospede + 1) {  // Usando index+1 como idHospede (simulação)
+            total += parseFloat(r.valorTotal);
+          }
+        });
+      }
+      return total.toFixed(2);
+    }
+
+    function atualizarTabela() {
+      tabelaHospedes.innerHTML = '';
+      if (hospedes.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.classList.add('text-center', 'text-muted');
+        td.textContent = 'Nenhum hóspede cadastrado.';
+        tr.appendChild(td);
+        tabelaHospedes.appendChild(tr);
+        return;
+      }
+
+      hospedes.forEach(h => {
+        const totalReservas = calcularTotalPorHospede(h.cpf);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${h.nome}</td>
+          <td>${h.email}</td>
+          <td>${h.cpf}</td>
+          <td>${h.telefone}</td>
+          <td>R$ ${totalReservas}</td>
+        `;
+        tabelaHospedes.appendChild(tr);
+      });
+    }
+
+    function mascaraCPF(valor) {
+      valor = valor.replace(/\D/g, '');
+      valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+      valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+      valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      return valor;
+    }
+
+    function mascaraTelefone(valor) {
+      valor = valor.replace(/\D/g, '');
+      if (valor.length > 11) valor = valor.substring(0, 11);
+      valor = valor.replace(/^(\d{2})(\d)/g, '($1) $2');
+      valor = valor.replace(/(\d{5})(\d)/, '$1-$2');
+      return valor;
+    }
+
+    inputCPF.addEventListener('input', e => e.target.value = mascaraCPF(e.target.value));
+    inputTelefone.addEventListener('input', e => e.target.value = mascaraTelefone(e.target.value));
+
+    formHospede.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const nome = document.getElementById('inputNome').value.trim();
+      const email = document.getElementById('inputEmail').value.trim();
+      const cpf = inputCPF.value.trim();
+      const telefone = inputTelefone.value.trim();
+
+      if (!nome || !email || !cpf || !telefone) {
+        alert('Preencha todos os campos corretamente.');
+        return;
+      }
+      if (cpf.length !== 14) {
+        alert('CPF inválido.');
+        return;
+      }
+      if (telefone.length < 13) {
+        alert('Telefone inválido.');
+        return;
+      }
+      if (hospedes.some(h => h.cpf === cpf)) {
+        alert('Este CPF já está cadastrado.');
+        return;
+      }
+
+      hospedes.push({ nome, email, cpf, telefone });
+      localStorage.setItem('hospedes', JSON.stringify(hospedes));
+      atualizarTabela();
+      formHospede.reset();
+    });
+
+    btnLimparHospedes.addEventListener('click', () => {
+      if (confirm('Tem certeza que deseja limpar todos os hóspedes?')) {
+        hospedes = [];
+        localStorage.setItem('hospedes', JSON.stringify(hospedes));
+        atualizarTabela();
+      }
+    });
+
+    atualizarTabela();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
